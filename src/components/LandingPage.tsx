@@ -29,6 +29,7 @@ import {
   Eye,
   Play
 } from 'lucide-react';
+import boltImg from '../assets/images/bolt.png';
 import LanguageSelector from './LanguageSelector';
 import { useTranslation } from '../utils/i18n';
 import { useApp } from '../contexts/AppContext';
@@ -334,11 +335,29 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
               <TrendingDown className="w-4 h-4" />
               Struggling with generic AI content that doesn't sound like YOU?
             </div>
+
+                        {/* Image droite - Badge bolt.new */}
+      <div className="flex justify-center lg:justify-end absolute">
+        <a 
+          href="https://bolt.new" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="hover:scale-105 transition-transform duration-300"
+        >
+          <img 
+            src={boltImg}
+            alt="Powered by bolt.new" 
+            className="w-20 h-20 md:w-20 md:h-20 drop-shadow-lg"
+          />
+        </a>
+      </div>
             
             <h1 className="text-5xl md:text-7xl font-bold text-gray-900 mb-6 leading-tight animate-in fade-in slide-in-from-bottom duration-700 delay-200">
               Turn Your <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Business Documents</span><br />
               Into Marketing <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Magic</span>
             </h1>
+
+
             
             <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed animate-in fade-in slide-in-from-bottom duration-700 delay-400">
               The first AI marketing platform that learns from <strong>YOUR business documents</strong> to create content that sounds authentically like your brand. No more generic AI - just content that's unmistakably <em>yours</em>.
@@ -392,9 +411,12 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
                 );
               })}
             </div>
+
+            
           </div>
         </div>
       </section>
+      
 
       {/* How It Works Section */}
       <section id="how-it-works" className="py-20 bg-white/50 backdrop-blur-sm relative">
