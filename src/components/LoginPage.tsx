@@ -38,9 +38,6 @@ export default function LoginPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4">
             <Sparkles className="w-8 h-8 text-white" />
           </div>
-          <link href="/" className="text-blue-600 font-semibold text-lg">
-            Grow&Shine
-          </link>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Grow&Shine</h1>
           <p className="text-gray-600">Transform your social presence with AI</p>
         </div>
