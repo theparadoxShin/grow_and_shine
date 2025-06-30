@@ -1,0 +1,467 @@
+service: grow-shine-backend
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: eu-west-1
+  stage: ${opt:stage, 'dev'}
+  memorySize: 512
+  timeout: 30
+  
+  environment:
+    STAGE: ${self:provider.stage}
+    REGION: ${self:provider.region}
+    USERS_TABLE: ${self:service}-${self:provider.stage}-users
+    SOCIAL_ACCOUNTS_TABLE: ${self:service}-${self:provider.stage}-social-accounts
+    POSTS_TABLE: ${self:service}-${self:provider.stage}-posts
+    COMMENTS_TABLE: ${self:service}-${self:provider.stage}-comments
+    COMMENTS_MANAGEMENT_TABLE: ${self:service}-${self:provider.stage}-comments-management
+    DOCUMENTS_TABLE: ${self:service}-${self:provider.stage}-documents
+    TEXTRACT_RESULTS_TABLE: ${self:service}-${self:provider.stage}-textract-results
+    S3_BUCKET: ${self:service}-${self:provider.stage}-storage
+    JWT_SECRET: ${ssm:/growshine/${self:provider.stage}/jwt-secret}
+    OPENAI_API_KEY: ${ssm:/growshine/${self:provider.stage}/openai-api-key}
+    VEO3_API_KEY: ${ssm:/growshine/${self:provider.stage}/veo3-api-key}
+    BEDROCK_REGION: us-east-1
+    
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource:
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}"
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.SOCIAL_ACCOUNTS_TABLE}"
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.POSTS_TABLE}"
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.COMMENTS_TABLE}"
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.COMMENTS_MANAGEMENT_TABLE}"
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DOCUMENTS_TABLE}"
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TEXTRACT_RESULTS_TABLE}"
+        - Effect: Allow
+          Action:
+            - s3:GetObject
+            - s3:PutObject
+            - s3:DeleteObject
+            - s3:GetObjectAcl
+            - s3:PutObjectAcl
+          Resource:
+            - "arn:aws:s3:::${self:provider.environment.S3_BUCKET}/*"
+        - Effect: Allow
+          Action:
+            - comprehend:DetectSentiment
+            - comprehend:BatchDetectSentiment
+          Resource: "*"
+        - Effect: Allow
+          Action:
+            - textract:AnalyzeDocument
+            - textract:StartDocumentAnalysis
+            - textract:GetDocumentAnalysis
+          Resource: "*"
+        - Effect: Allow
+          Action:
+            - bedrock:InvokeModel
+            - bedrock:InvokeModelWithResponseStream
+          Resource: 
+            - "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-sonnet-20240229-v1:0"
+            - "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-haiku-20240307-v1:0"
+            - "arn:aws:bedrock:us-east-1::foundation-model/meta.llama2-70b-chat-v1"
+            - "arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-text-express-v1"
+        - Effect: Allow
+          Action:
+            - events:PutEvents
+          Resource: "*"
+        - Effect: Allow
+          Action:
+            - ses:SendEmail
+            - ses:SendRawEmail
+          Resource: "*"
+
+functions:
+  # Authentication
+  authHandler:
+    handler: src/handlers/auth.handler
+    events:
+      - http:
+          path: /auth/login
+          method: post
+          cors: true
+      - http:
+          path: /auth/register
+          method: post
+          cors: true
+
+  # File Upload
+  uploadHandler:
+    handler: src/handlers/upload.handler
+    events:
+      - http:
+          path: /upload-url
+          method: get
+          cors: true
+          authorizer:
+            name: authorizerFunc
+            resultTtlInSeconds: 300
+
+  # Document Processing with Textract
+  textractProcessor:
+    handler: src/handlers/textract.handler
+    timeout: 300
+    memorySize: 1024
+    events:
+      - s3:
+          bucket: ${self:provider.environment.S3_BUCKET}
+          event: s3:ObjectCreated:*
+          rules:
+            - prefix: documents/
+            - suffix: .pdf
+      - http:
+          path: /documents/{docId}/analysis
+          method: get
+          cors: true
+          authorizer:
+            name: authorizerFunc
+
+  # Content Generation with Bedrock
+  bedrockGenerator:
+    handler: src/handlers/bedrock.handler
+    timeout: 60
+    memorySize: 1024
+    events:
+      - http:
+          path: /content/generate
+          method: post
+          cors: true
+          authorizer:
+            name: authorizerFunc
+      - http:
+          path: /content/generate-stream
+          method: post
+          cors: true
+          authorizer:
+            name: authorizerFunc
+
+  # Video Generation with Google Veo3 / OpenAI Sora
+  videoGenerator:
+    handler: src/handlers/video-generator.handler
+    timeout: 120
+    memorySize: 1024
+    events:
+      - http:
+          path: /video/generate
+          method: post
+          cors: true
+          authorizer:
+            name: authorizerFunc
+      - http:
+          path: /video/status/{videoId}
+          method: get
+          cors: true
+          authorizer:
+            name: authorizerFunc
+
+  # Comments Management
+  commentsManager:
+    handler: src/handlers/comments.handler
+    events:
+      - http:
+          path: /comments
+          method: get
+          cors: true
+          authorizer:
+            name: authorizerFunc
+      - http:
+          path: /comments/stats
+          method: get
+          cors: true
+          authorizer:
+            name: authorizerFunc
+      - http:
+          path: /comments/generate-reply
+          method: post
+          cors: true
+          authorizer:
+            name: authorizerFunc
+      - http:
+          path: /comments/reply
+          method: post
+          cors: true
+          authorizer:
+            name: authorizerFunc
+      - schedule: rate(30 minutes)
+
+  # Social Media
+  socialConnect:
+    handler: src/handlers/social.connect
+    events:
+      - http:
+          path: /social/connect
+          method: post
+          cors: true
+          authorizer:
+            name: authorizerFunc
+
+  socialAccounts:
+    handler: src/handlers/social.getAccounts
+    events:
+      - http:
+          path: /social/accounts
+          method: get
+          cors: true
+          authorizer:
+            name: authorizerFunc
+
+  analyzeSentiment:
+    handler: src/handlers/sentiment.analyze
+    events:
+      - http:
+          path: /social/sentiment
+          method: get
+          cors: true
+          authorizer:
+            name: authorizerFunc
+
+  # Publishing
+  schedulePost:
+    handler: src/handlers/publish.schedule
+    events:
+      - http:
+          path: /content/schedule
+          method: post
+          cors: true
+          authorizer:
+            name: authorizerFunc
+
+  publishPost:
+    handler: src/handlers/publish.publish
+    events:
+      - http:
+          path: /content/publish
+          method: post
+          cors: true
+          authorizer:
+            name: authorizerFunc
+      - eventBridge:
+          pattern:
+            source:
+              - "growshine.scheduler"
+            detail-type:
+              - "Scheduled Post"
+
+  # Analytics
+  getAnalytics:
+    handler: src/handlers/analytics.getDashboard
+    events:
+      - http:
+          path: /analytics/dashboard
+          method: get
+          cors: true
+          authorizer:
+            name: authorizerFunc
+
+  # User Documents
+  getUserDocuments:
+    handler: src/handlers/document.getUserDocuments
+    events:
+      - http:
+          path: /user/documents
+          method: get
+          cors: true
+          authorizer:
+            name: authorizerFunc
+
+  # Authorizer
+  authorizerFunc:
+    handler: src/handlers/authorizer.handler
+
+resources:
+  Resources:
+    # S3 Bucket
+    S3Bucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:provider.environment.S3_BUCKET}
+        CorsConfiguration:
+          CorsRules:
+            - AllowedHeaders:
+                - "*"
+              AllowedMethods:
+                - GET
+                - PUT
+                - POST
+                - DELETE
+              AllowedOrigins:
+                - "*"
+              MaxAge: 3000
+
+    # DynamoDB Tables
+    UsersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.USERS_TABLE}
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: email
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: EmailIndex
+            KeySchema:
+              - AttributeName: email
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+            BillingMode: PAY_PER_REQUEST
+        BillingMode: PAY_PER_REQUEST
+
+    SocialAccountsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.SOCIAL_ACCOUNTS_TABLE}
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: accountId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: accountId
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST
+
+    PostsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.POSTS_TABLE}
+        AttributeDefinitions:
+          - AttributeName: postId
+            AttributeType: S
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: createdAt
+            AttributeType: S
+        KeySchema:
+          - AttributeName: postId
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: UserPostsIndex
+            KeySchema:
+              - AttributeName: userId
+                KeyType: HASH
+              - AttributeName: createdAt
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+            BillingMode: PAY_PER_REQUEST
+        BillingMode: PAY_PER_REQUEST
+
+    CommentsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.COMMENTS_TABLE}
+        AttributeDefinitions:
+          - AttributeName: commentId
+            AttributeType: S
+          - AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: commentId
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: UserCommentsIndex
+            KeySchema:
+              - AttributeName: userId
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+            BillingMode: PAY_PER_REQUEST
+        BillingMode: PAY_PER_REQUEST
+
+    CommentsManagementTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.COMMENTS_MANAGEMENT_TABLE}
+        AttributeDefinitions:
+          - AttributeName: commentId
+            AttributeType: S
+          - AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: commentId
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: UserManagementIndex
+            KeySchema:
+              - AttributeName: userId
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+            BillingMode: PAY_PER_REQUEST
+        BillingMode: PAY_PER_REQUEST
+
+    DocumentsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.DOCUMENTS_TABLE}
+        AttributeDefinitions:
+          - AttributeName: docId
+            AttributeType: S
+          - AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: docId
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: UserDocumentsIndex
+            KeySchema:
+              - AttributeName: userId
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+            BillingMode: PAY_PER_REQUEST
+        BillingMode: PAY_PER_REQUEST
+
+    TextractResultsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.TEXTRACT_RESULTS_TABLE}
+        AttributeDefinitions:
+          - AttributeName: textractId
+            AttributeType: S
+          - AttributeName: docId
+            AttributeType: S
+          - AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: textractId
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: DocIndex
+            KeySchema:
+              - AttributeName: docId
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+            BillingMode: PAY_PER_REQUEST
+          - IndexName: UserTextractIndex
+            KeySchema:
+              - AttributeName: userId
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+            BillingMode: PAY_PER_REQUEST
+        BillingMode: PAY_PER_REQUEST
+
+plugins:
+  - serverless-offline

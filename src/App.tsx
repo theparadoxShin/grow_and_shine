@@ -7,6 +7,7 @@ import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import DocumentUploader from './components/DocumentUploader';
 import ContentGenerator from './components/ContentGenerator';
+import CommentsManager from './components/CommentsManager';
 import History from './components/History';
 import Profile from './components/Profile';
 import SocialConfig from './components/SocialConfig';
@@ -35,6 +36,8 @@ function AppContent() {
         return <DocumentUploader />;
       case 'generate':
         return <ContentGenerator />;
+      case 'comments':
+        return <CommentsManager />;
       case 'history':
         return <History />;
       case 'profile':

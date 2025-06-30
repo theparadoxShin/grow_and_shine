@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LogIn, Brain, Sparkles } from 'lucide-react';
+import { LogIn, Sparkles } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 
 export default function LoginPage() {
@@ -24,7 +24,7 @@ export default function LoginPage() {
       dispatch({ type: 'LOGIN', payload: mockUser });
       dispatch({ 
         type: 'ADD_NOTIFICATION', 
-        payload: { message: 'Connexion réussie !', type: 'success' } 
+        payload: { message: 'Login successful!', type: 'success' } 
       });
       setIsLoading(false);
     }, 1500);
@@ -36,10 +36,10 @@ export default function LoginPage() {
         {/* Logo et titre */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4">
-            <Brain className="w-8 h-8 text-white" />
+            <Sparkles className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">SynthAI-Strategist</h1>
-          <p className="text-gray-600">Transformez vos documents en contenu intelligent</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Grow&Shine</h1>
+          <p className="text-gray-600">Transform your social presence with AI</p>
         </div>
 
         {/* Formulaire de connexion */}
@@ -55,14 +55,14 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 transition-all"
-                placeholder="votre@email.com"
+                placeholder="your@email.com"
                 required
               />
             </div>
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Mot de passe
+                Password
               </label>
               <input
                 id="password"
@@ -83,12 +83,12 @@ export default function LoginPage() {
               {isLoading ? (
                 <>
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Connexion...
+                  Signing in...
                 </>
               ) : (
                 <>
                   <LogIn className="w-5 h-5" />
-                  Se connecter
+                  Sign In
                 </>
               )}
             </button>
@@ -96,7 +96,7 @@ export default function LoginPage() {
 
           <div className="mt-6 pt-6 border-t border-gray-100">
             <p className="text-sm text-gray-500 text-center">
-              Demo - Utilisez n'importe quel email/mot de passe
+              Demo - Use any email/password
             </p>
           </div>
         </div>
@@ -105,15 +105,15 @@ export default function LoginPage() {
         <div className="mt-8 grid grid-cols-3 gap-4 text-center">
           <div className="p-4">
             <Sparkles className="w-6 h-6 text-blue-600 mx-auto mb-2" />
-            <p className="text-xs text-gray-600">IA Avancée</p>
+            <p className="text-xs text-gray-600">Advanced AI</p>
           </div>
           <div className="p-4">
-            <Brain className="w-6 h-6 text-blue-600 mx-auto mb-2" />
-            <p className="text-xs text-gray-600">Analyse Smart</p>
+            <Sparkles className="w-6 h-6 text-blue-600 mx-auto mb-2" />
+            <p className="text-xs text-gray-600">Smart Analytics</p>
           </div>
           <div className="p-4">
             <LogIn className="w-6 h-6 text-blue-600 mx-auto mb-2" />
-            <p className="text-xs text-gray-600">Sécurisé</p>
+            <p className="text-xs text-gray-600">Secure</p>
           </div>
         </div>
       </div>

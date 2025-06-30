@@ -7,6 +7,7 @@ export interface User {
   avatar?: string;
   company?: string;
   role?: string;
+  language?: string;
 }
 
 export interface Document {
@@ -15,7 +16,11 @@ export interface Document {
   size: number;
   type: string;
   uploadDate: string;
-  status: 'processing' | 'ready' | 'error';
+  status: 'processing' | 'ready' | 'error' | 'low_confidence';
+  confidence?: number;
+  pageCount?: number;
+  hasTable?: boolean;
+  hasForm?: boolean;
 }
 
 export interface GeneratedContent {
@@ -23,9 +28,15 @@ export interface GeneratedContent {
   title: string;
   prompt: string;
   content: string;
+  imageUrl?: string;
+  videoUrl?: string;
   createdAt: string;
   wordCount: number;
   platform?: string;
+  mode?: 'text' | 'text-image' | 'image' | 'video';
+  style?: string;
+  videoStyle?: string;
+  videoDuration?: number;
   scheduled?: boolean;
   scheduledDate?: string;
   published?: boolean;
@@ -55,7 +66,8 @@ export interface SentimentData {
 interface AppState {
   user: User | null;
   isAuthenticated: boolean;
-  currentView: 'dashboard' | 'documents' | 'generate' | 'history' | 'profile' | 'social-config';
+  currentView: 'dashboard' | 'documents' | 'generate' | 'comments' | 'history' | 'profile' | 'social-config';
+  language: string;
   documents: Document[];
   generatedContent: GeneratedContent[];
   socialAccounts: SocialAccount[];
@@ -68,6 +80,7 @@ type AppAction =
   | { type: 'LOGIN'; payload: User }
   | { type: 'LOGOUT' }
   | { type: 'SET_VIEW'; payload: AppState['currentView'] }
+  | { type: 'SET_LANGUAGE'; payload: string }
   | { type: 'ADD_DOCUMENT'; payload: Document }
   | { type: 'UPDATE_DOCUMENT'; payload: { id: string; updates: Partial<Document> } }
   | { type: 'ADD_GENERATED_CONTENT'; payload: GeneratedContent }
@@ -83,6 +96,7 @@ const initialState: AppState = {
   user: null,
   isAuthenticated: false,
   currentView: 'dashboard',
+  language: 'en', // Default to English
   documents: [],
   generatedContent: [],
   socialAccounts: [],
@@ -101,11 +115,12 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case 'LOGIN':
       return {
         ...state,
-        user: action.payload,
+        user: { ...action.payload, language: action.payload.language || state.language },
         isAuthenticated: true
       };
     case 'LOGOUT':
-      localStorage.removeItem('synthai-user');
+      localStorage.removeItem('growshine-user');
+      localStorage.removeItem('growshine-language');
       return {
         ...state,
         user: null,
@@ -116,6 +131,13 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         currentView: action.payload
+      };
+    case 'SET_LANGUAGE':
+      localStorage.setItem('growshine-language', action.payload);
+      return {
+        ...state,
+        language: action.payload,
+        user: state.user ? { ...state.user, language: action.payload } : null
       };
     case 'ADD_DOCUMENT':
       return {
@@ -135,9 +157,13 @@ function appReducer(state: AppState, action: AppAction): AppState {
         generatedContent: [action.payload, ...state.generatedContent]
       };
     case 'UPDATE_USER':
+      const updatedUser = state.user ? { ...state.user, ...action.payload } : null;
+      if (updatedUser) {
+        localStorage.setItem('growshine-user', JSON.stringify(updatedUser));
+      }
       return {
         ...state,
-        user: state.user ? { ...state.user, ...action.payload } : null
+        user: updatedUser
       };
     case 'CONNECT_SOCIAL_ACCOUNT':
       return {
@@ -182,7 +208,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('synthai-user');
+    // Load saved language
+    const savedLanguage = localStorage.getItem('growshine-language');
+    if (savedLanguage) {
+      dispatch({ type: 'SET_LANGUAGE', payload: savedLanguage });
+    }
+
+    // Load saved user
+    const savedUser = localStorage.getItem('growshine-user');
     if (savedUser) {
       const user = JSON.parse(savedUser);
       dispatch({ type: 'LOGIN', payload: user });
@@ -192,8 +225,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         {
           id: '1',
           platform: 'facebook',
-          username: 'synthai.strategist',
-          displayName: 'SynthAI Strategist',
+          username: 'growshine.official',
+          displayName: 'Grow&Shine',
           avatar: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=40&h=40&fit=crop&crop=face',
           connected: true,
           followers: 12500,
@@ -203,8 +236,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         {
           id: '2',
           platform: 'linkedin',
-          username: 'synthai-strategist',
-          displayName: 'SynthAI Strategist',
+          username: 'grow-and-shine',
+          displayName: 'Grow&Shine',
           avatar: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=40&h=40&fit=crop&crop=face',
           connected: true,
           followers: 8300,
@@ -214,8 +247,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         {
           id: '3',
           platform: 'twitter',
-          username: '@synthai_ai',
-          displayName: 'SynthAI Strategist',
+          username: '@growandshine_ai',
+          displayName: 'Grow&Shine',
           avatar: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=40&h=40&fit=crop&crop=face',
           connected: true,
           followers: 5600,
@@ -239,12 +272,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }, 1000);
     }
   }, []);
-
-  useEffect(() => {
-    if (state.user) {
-      localStorage.setItem('synthai-user', JSON.stringify(state.user));
-    }
-  }, [state.user]);
 
   return (
     <AppContext.Provider value={{ state, dispatch }}>

@@ -1,34 +1,36 @@
 import React from 'react';
 import { FileText, Sparkles, TrendingUp, Clock, Download, Eye, Users, Heart, MessageCircle, Share2, TrendingDown } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
+import { useTranslation } from '../utils/i18n';
 
 export default function Dashboard() {
   const { state, dispatch } = useApp();
+  const { t } = useTranslation(state.language);
 
   const stats = [
     {
-      label: 'Documents téléchargés',
+      label: t.documentsUploaded,
       value: state.documents.length,
       icon: FileText,
       color: 'blue',
       change: '+12%'
     },
     {
-      label: 'Contenus générés',
+      label: t.contentGenerated,
       value: state.generatedContent.length,
       icon: Sparkles,
       color: 'green',
       change: '+24%'
     },
     {
-      label: 'Réseaux connectés',
+      label: t.networksConnected,
       value: state.socialAccounts.filter(acc => acc.connected).length,
       icon: Users,
       color: 'purple',
       change: '+2'
     },
     {
-      label: 'Engagement moyen',
+      label: t.averageEngagement,
       value: state.socialAccounts.length > 0 
         ? `${(state.socialAccounts.reduce((acc, account) => acc + account.engagement, 0) / state.socialAccounts.length).toFixed(1)}%`
         : '0%',
@@ -42,47 +44,47 @@ export default function Dashboard() {
     {
       id: 1,
       type: 'generate',
-      title: 'Article sur l\'IA générative',
-      description: 'Contenu généré à partir du document "AI-Research.pdf"',
-      time: 'Il y a 2 heures',
+      title: 'AI-generated article',
+      description: 'Content generated from "AI-Research.pdf" document',
+      time: '2 hours ago',
       status: 'completed'
     },
     {
       id: 2,
       type: 'social',
-      title: 'Publication LinkedIn programmée',
-      description: 'Post sur les tendances marketing - 14h00',
-      time: 'Il y a 3 heures',
+      title: 'LinkedIn post scheduled',
+      description: 'Marketing trends post - 2:00 PM',
+      time: '3 hours ago',
       status: 'scheduled'
     },
     {
       id: 3,
       type: 'upload',
-      title: 'Nouveau document téléchargé',
+      title: 'New document uploaded',
       description: 'Marketing-Strategy-2024.pdf (2.3 MB)',
-      time: 'Il y a 4 heures',
+      time: '4 hours ago',
       status: 'completed'
     }
   ];
 
   const quickActions = [
     {
-      title: 'Télécharger un document',
-      description: 'Ajoutez un nouveau PDF à analyser',
+      title: 'Upload a document',
+      description: 'Add a new PDF to analyze',
       icon: FileText,
       color: 'blue',
       action: () => dispatch({ type: 'SET_VIEW', payload: 'documents' })
     },
     {
-      title: 'Générer du contenu',
-      description: 'Créez du contenu avec l\'IA',
+      title: 'Generate content',
+      description: 'Create content with AI',
       icon: Sparkles,
       color: 'green',
       action: () => dispatch({ type: 'SET_VIEW', payload: 'generate' })
     },
     {
-      title: 'Configurer réseaux sociaux',
-      description: 'Connectez vos comptes sociaux',
+      title: 'Configure social networks',
+      description: 'Connect your social accounts',
       icon: Users,
       color: 'purple',
       action: () => dispatch({ type: 'SET_VIEW', payload: 'social-config' })
@@ -122,13 +124,13 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 bg-gradient-to-br from-slate-50/50 to-blue-50/30 min-h-screen">
       {/* En-tête */}
-      <div>
+      <div className="animate-in fade-in slide-in-from-top duration-500">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">
-          Bonjour, {state.user?.name?.split(' ')[0]} 👋
+          {t.welcomeMessage}, {state.user?.name?.split(' ')[0]} 👋
         </h1>
-        <p className="text-gray-600">Voici un aperçu de votre activité aujourd'hui</p>
+        <p className="text-gray-600">{t.todayOverview}</p>
       </div>
 
       {/* Statistiques */}
@@ -136,7 +138,11 @@ export default function Dashboard() {
         {stats.map((stat, index) => {
           const Icon = stat.icon;
           return (
-            <div key={index} className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+            <div 
+              key={index} 
+              className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl border border-gray-200/50 shadow-sm hover:shadow-md transition-all duration-300 animate-in fade-in slide-in-from-bottom"
+              style={{ animationDelay: `${index * 100}ms` }}
+            >
               <div className="flex items-center justify-between">
                 <div className={`w-12 h-12 bg-${stat.color}-100 rounded-xl flex items-center justify-center`}>
                   <Icon className={`w-6 h-6 text-${stat.color}-600`} />
@@ -154,18 +160,22 @@ export default function Dashboard() {
 
       {/* Analyse des sentiments */}
       {state.sentimentData.length > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-200 p-6">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-200/50 p-6 animate-in fade-in slide-in-from-bottom duration-700 delay-400">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold text-gray-900">Analyse des Sentiments</h2>
-            <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
-              Voir détails
+            <h2 className="text-lg font-semibold text-gray-900">{t.sentimentAnalysis}</h2>
+            <button className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors duration-200">
+              View details
             </button>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {state.sentimentData.map((sentiment) => (
-              <div key={sentiment.platform} className="relative">
-                <div className={`bg-gradient-to-r ${getSentimentColor(sentiment.platform)} rounded-xl p-4 text-white`}>
+            {state.sentimentData.map((sentiment, index) => (
+              <div 
+                key={sentiment.platform} 
+                className="relative animate-in fade-in slide-in-from-bottom"
+                style={{ animationDelay: `${(index + 5) * 100}ms` }}
+              >
+                <div className={`bg-gradient-to-r ${getSentimentColor(sentiment.platform)} rounded-xl p-4 text-white hover:scale-105 transition-transform duration-300`}>
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <span className="text-lg">{getPlatformIcon(sentiment.platform)}</span>
@@ -176,21 +186,21 @@ export default function Dashboard() {
                   
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span>Positif</span>
+                      <span>Positive</span>
                       <span>{sentiment.positive}%</span>
                     </div>
                     <div className="w-full bg-white bg-opacity-20 rounded-full h-2">
                       <div 
-                        className="bg-white rounded-full h-2 transition-all duration-500"
+                        className="bg-white rounded-full h-2 transition-all duration-1000 ease-out"
                         style={{ width: `${sentiment.positive}%` }}
                       />
                     </div>
                     <div className="flex justify-between text-xs opacity-80">
-                      <span>Neutre: {sentiment.neutral}%</span>
-                      <span>Négatif: {sentiment.negative}%</span>
+                      <span>Neutral: {sentiment.neutral}%</span>
+                      <span>Negative: {sentiment.negative}%</span>
                     </div>
                     <div className="text-xs opacity-80 mt-2">
-                      {sentiment.total} commentaires analysés
+                      {sentiment.total} comments analyzed
                     </div>
                   </div>
                 </div>
@@ -202,8 +212,8 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Actions rapides */}
-        <div className="lg:col-span-1">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Actions rapides</h2>
+        <div className="lg:col-span-1 animate-in fade-in slide-in-from-left duration-700 delay-600">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">{t.quickActions}</h2>
           <div className="space-y-3">
             {quickActions.map((action, index) => {
               const Icon = action.icon;
@@ -211,14 +221,15 @@ export default function Dashboard() {
                 <button
                   key={index}
                   onClick={action.action}
-                  className="w-full p-4 bg-white border border-gray-200 rounded-xl hover:border-blue-200 hover:bg-blue-50 transition-all text-left group"
+                  className="w-full p-4 bg-white/80 backdrop-blur-sm border border-gray-200/50 rounded-xl hover:border-blue-200 hover:bg-blue-50/50 transition-all duration-300 text-left group"
+                  style={{ animationDelay: `${(index + 8) * 100}ms` }}
                 >
                   <div className="flex items-start gap-3">
-                    <div className={`w-10 h-10 bg-${action.color}-100 rounded-lg flex items-center justify-center group-hover:bg-${action.color}-200 transition-colors`}>
+                    <div className={`w-10 h-10 bg-${action.color}-100 rounded-lg flex items-center justify-center group-hover:bg-${action.color}-200 transition-colors duration-300 group-hover:scale-110`}>
                       <Icon className={`w-5 h-5 text-${action.color}-600`} />
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-medium text-gray-900">{action.title}</h3>
+                      <h3 className="font-medium text-gray-900 group-hover:text-blue-700 transition-colors duration-200">{action.title}</h3>
                       <p className="text-sm text-gray-600">{action.description}</p>
                     </div>
                   </div>
@@ -229,13 +240,13 @@ export default function Dashboard() {
         </div>
 
         {/* Activité récente */}
-        <div className="lg:col-span-2">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Activité récente</h2>
-          <div className="bg-white border border-gray-200 rounded-2xl">
+        <div className="lg:col-span-2 animate-in fade-in slide-in-from-right duration-700 delay-800">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">{t.recentActivity}</h2>
+          <div className="bg-white/80 backdrop-blur-sm border border-gray-200/50 rounded-2xl">
             {recentActivity.map((activity, index) => (
               <div 
                 key={activity.id}
-                className={`p-4 ${index !== recentActivity.length - 1 ? 'border-b border-gray-100' : ''}`}
+                className={`p-4 ${index !== recentActivity.length - 1 ? 'border-b border-gray-100' : ''} hover:bg-gray-50/50 transition-colors duration-200`}
               >
                 <div className="flex items-start gap-3">
                   <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
@@ -255,10 +266,10 @@ export default function Dashboard() {
                     <p className="text-xs text-gray-500 mt-1">{activity.time}</p>
                   </div>
                   <div className="flex gap-2">
-                    <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
+                    <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200">
                       <Eye className="w-4 h-4" />
                     </button>
-                    <button className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all">
+                    <button className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all duration-200">
                       <Download className="w-4 h-4" />
                     </button>
                   </div>
